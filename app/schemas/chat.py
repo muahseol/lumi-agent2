@@ -4,9 +4,11 @@
 이 모듈에서 채팅 관련 API의 데이터 모델을 정의합니다.
 2강에서 실제 채팅 API 구현 시 사용됩니다.
 """
+
+from datetime import UTC, datetime
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
-from typing import Any, Literal, Optional
-from datetime import datetime, timezone
 
 
 class ChatRequest(BaseModel):
@@ -43,7 +45,7 @@ class ChatRequest(BaseModel):
         examples=["user123", "session-abc-123"],
     )
 
-    user_id: Optional[str] = Field(
+    user_id: str | None = Field(
         default=None,
         max_length=100,
         description="사용자 식별자 (선택)",
@@ -68,13 +70,13 @@ class ChatResponse(BaseModel):
         ...     tool_used="get_schedule",
         ... )
     """
-    
+
     message: str = Field(
         ...,
         description="루미의 응답 메시지",
     )
 
-    tool_used: Optional[str] = Field(
+    tool_used: str | None = Field(
         default=None,
         description="사용된 Tool 이름",
         examples=["get_schedule", "recommend_song", None],
@@ -86,10 +88,9 @@ class ChatResponse(BaseModel):
     )
 
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="응답 생성 시간 (UTC)",
     )
-
 
 
 # =============================================================
@@ -97,6 +98,7 @@ class ChatResponse(BaseModel):
 # =============================================================
 
 StreamEventType = Literal["thinking", "tool", "token", "response", "error", "done"]
+
 
 class StreamEvent(BaseModel):
     """
@@ -187,9 +189,8 @@ class StreamEvent(BaseModel):
             str: SSE 형식 문자열 (data: {...}\n\n)
         """
         import orjson
-    
+
         # None 값 제외하고 직렬화
         data = {k: v for k, v in self.model_dump().items() if v is not None}
         json_str = orjson.dumps(data).decode("utf-8")
         return f"data: {json_str}\n\n"
-
